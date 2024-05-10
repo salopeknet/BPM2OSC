@@ -1,4 +1,4 @@
-# OSC2BPM(4GMA3)
+# BPM2OSC(4GMA3)
 
 First test. More to come.
 

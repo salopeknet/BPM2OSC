@@ -6,7 +6,6 @@ import os
 import time
 import sys
 import math
-import ipaddress
 
 import argparse
 
@@ -18,8 +17,8 @@ from typing import List, NamedTuple, Tuple
 class ServerInfo(NamedTuple):
     ip: str
     port: int
+    mode: str
     address: str
-    mode: str = None
 
 
 parser = argparse.ArgumentParser()
@@ -28,14 +27,9 @@ sp = parser.add_subparsers(dest="command")
 beat_parser = sp.add_parser("beat",
                             help="Start beat detection")
 beat_parser.add_argument("-s", "--server",
-                         help="OSC Server address (multiple can be provided) in format 'IP' 'PORT' 'PATH' 'MODE', "
-                              "Mode PLAIN for plain BPM-Value,Mode HALF for half of BPM-Value, "
-                              "Mode GMA3 for GrandMA3 Speed masters where 100 percent is for 240BPM. "
-                              "  MODE is optional and default to PLAIN"
-                              " e.g. 127.0.0.1 12000 /test GMA3",
-                         nargs='*',
-                         action="append"
-                         )
+                         help="OSC Server address (multiple can be provided), Mode=PLAIN for plain BPM-Value, Mode=HALF for half of BPM-Value, Mode=GMA3 for GrandMA3 Speed (100 percent=240BPM), Mode=PULSE for Pulse/Flash 1/0 only, Mode=GMA3MASTER for SpeedMasters 1-15 (set ADDRESS to '../13.12.3.x')", nargs=4,
+                         action="append",
+                         metavar=("IP", "PORT", "MODE", "ADDRESS"), required=True)
 beat_parser.add_argument("-b", "--bufsize",
                          help="Size of audio buffer for beat detection (default: 512)", default=512,
                          type=int)
@@ -45,6 +39,7 @@ beat_parser.add_argument("-d", "--device",
                          help="Input device index (use list command to see available devices)",
                          default=None, type=int)
 
+
 list_parser = sp.add_parser("list",
                             help="Print a list of all available audio devices")
 args = parser.parse_args()
@@ -53,13 +48,12 @@ args = parser.parse_args()
 class BeatPrinter:
     def __init__(self):
         self.state: int = 0
-        self.spinner = "¼▚▞▚"
+        self.spinner = ["◼︎▫︎▫︎▫︎", "▫︎◼︎▫︎▫︎", "▫︎▫︎◼︎▫︎", "▫︎▫︎▫︎◼︎"]
 
     def print_bpm(self, bpm: float, dbs: float) -> None:
-        print(f"{self.spinner[self.state]}\t{bpm:.1f} BPM\t{dbs:.1f} dB")
+        print(f"\r{self.spinner[self.state]}\t{bpm:.1f} BPM\t{dbs:.1f} dB", end='', flush=True)
         self.state = (self.state + 1) % len(self.spinner)
-
-
+        
 class BeatDetector:
     def __init__(self, buf_size: int, server_info: List[ServerInfo]):
         self.buf_size: int = buf_size
@@ -112,15 +106,20 @@ class BeatDetector:
                 self.spinner.print_bpm(bpm, dbs)
 
             for server, server_info in zip(self.osc_servers, self.server_info):
-                mode = server_info.mode
-                if mode is None:
-                    mode = 'plain'
-                if mode.lower() == "half":
-                    server[0].send_message(server[1], bpmh)
-                elif mode.lower() == "gma3":
-                    server[0].send_message(server[1], bpmg)
-                else:
-                    server[0].send_message(server[1], bpm)
+            	mode = server_info.mode
+            	if mode == "PLAIN":
+                	server[0].send_message(server[1], bpm)
+            	elif mode == "HALF":
+                	server[0].send_message(server[1], bpmh)
+            	elif mode == "GMA3":
+                	server[0].send_message(server[1], bpmg)
+            	elif mode == "PULSE":
+                	server[0].send_message(server[1], 1)
+                	server[0].send_message(server[1], 0)
+            	elif mode == "GMA3MASTER":
+#--server 127.0.0.1 8000 GMA3MASTER /gMA3/13.12.3.x (Speed=1-15)
+                	server[0].send_message(server[1], ('FaderMaster',1,bpmg))
+
 
         return None, pyaudio.paContinue  # Tell pyAudio to continue
 
@@ -146,44 +145,25 @@ def list_devices():
 
 # main
 def main():
-
     if args.command == "list":
         list_devices()
         return
 
     if args.command == "beat":
-        # Ensure at least 3 arguments are provided for server
-        if args.server is None:
-            parser.error('At least 3 server arguments are required ("IP","PORT","PATH")')
+        print("\nWelcome to BPM2OSC v0.1 by CONGO*blue | foh@congo-blue.de | forked from zak-45\n")
+        print("(Hit Ctrl+C to exit)\n")
 
-        # select 4 args
-        server_info_4: List[ServerInfo] = [ServerInfo(x[0], int(x[1]), x[2], x[3]) for x in args.server if len(x) == 4]
-        # select 3 args
-        server_info_3: List[ServerInfo] = [ServerInfo(x[0], int(x[1]), x[2]) for x in args.server if len(x) == 3]
-        # final
-        server_info = server_info_3 + server_info_4
+        # Pack data from arguments into ServerInfo objects
+        server_info: List[ServerInfo] = [ServerInfo(x[0], int(x[1]), x[2], x[3]) for x in args.server]
 
-        # some checks
-        for x in args.server:
-            if len(x) < 3:
-                parser.error('At least 3 server arguments are required ("IP","PORT","PATH")')
-                sys.exit(1)
-            elif len(x) > 4:
-                parser.error('More than 4 arguments provided for server')
-                sys.exit(2)
+        # Print server info
+        print("Sending BPM to following OSC-server(s):")
+        for server in server_info:
+            print(f"IP: {server.ip}, Port: {server.port}, Mode: {server.mode}, OSC-Address: {server.address}")
 
-        for item in server_info:
-            # now check validate arguments
-            try:
-                ipaddress.ip_address(item.ip)
-            except ValueError:
-                print(f'Not a valid IP address: {item.ip}')
-                sys.exit(3)
-
-            if not item.address.startswith('/'):
-                print(f'PATH {item.address} not valid, need to start with "/"')
-                sys.exit(4)
-
+        print("\nHere we go...\n  a one...\n    a two...\n      a one,two,three,four...\n")
+        print("\n... aaand counting!\n")
+        
         bd = BeatDetector(args.bufsize, server_info)
 
         # capture ctrl+c to stop gracefully process

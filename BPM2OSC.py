@@ -48,7 +48,10 @@ args = parser.parse_args()
 class BeatPrinter:
     def __init__(self):
         self.state: int = 0
-        self.spinner = ["◼︎▫︎▫︎▫︎", "▫︎◼︎▫︎▫︎", "▫︎▫︎◼︎▫︎", "▫︎▫︎▫︎◼︎"]
+# Not working on Windows. Code-Page-Problem?
+#        self.spinner = ["◼︎▫︎▫︎▫︎", "▫︎◼︎▫︎▫︎", "▫︎▫︎◼︎▫︎", "▫︎▫︎▫︎◼︎"]
+        self.spinner = ["1...", ".2..", "..3.", "...4"]
+
 
     def print_bpm(self, bpm: float, dbs: float) -> None:
         print(f"\r{self.spinner[self.state]}\t{bpm:.1f} BPM\t{dbs:.1f} dB", end='', flush=True)
@@ -149,7 +152,7 @@ def main():
         return
 
     if args.command == "beat":
-        print("\nWelcome to BPM2OSC v0.2 by CONGO*blue | foh@congo-blue.de | forked from zak-45\n")
+        print("\nWelcome to BPM2OSC(4GMA3) v0.21 by CONGO*blue | foh@congo-blue.de | forked from zak-45\n")
         print("(Hit Ctrl+C to exit)\n")
 
         # Pack data from arguments into ServerInfo objects, Replace SPEED with 13.12.3. when MODE=GMA3MASTER 

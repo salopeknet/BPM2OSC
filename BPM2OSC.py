@@ -27,7 +27,7 @@ sp = parser.add_subparsers(dest="command")
 beat_parser = sp.add_parser("beat",
                             help="Start beat detection")
 beat_parser.add_argument("-s", "--server",
-                         help="OSC Server address (multiple can be provided), Mode=PLAIN for plain BPM-Value, Mode=HALF for half of BPM-Value, Mode=GMA3 for GrandMA3 Speed (100 percent=240BPM), Mode=PULSE for Pulse/Flash 1/0 only, Mode=GMA3MASTER for SpeedMasters 1-15 (set ADDRESS to '../13.12.3.x')", nargs=4,
+                         help="OSC Server address (multiple can be provided), Mode=PLAIN for plain BPM-Value, Mode=HALF for half of BPM-Value, Mode=GMA3 for GrandMA3 Speed (100 percent=240BPM), Mode=PULSE for Pulse/Flash 1/0 only, Mode=GMA3MASTER: type SPEED1 (or 1-15) in Address", nargs=4,
                          action="append",
                          metavar=("IP", "PORT", "MODE", "ADDRESS"), required=True)
 beat_parser.add_argument("-b", "--bufsize",
@@ -117,7 +117,6 @@ class BeatDetector:
                 	server[0].send_message(server[1], 1)
                 	server[0].send_message(server[1], 0)
             	elif mode == "GMA3MASTER":
-#--server 127.0.0.1 8000 GMA3MASTER /gMA3/13.12.3.x (Speed=1-15)
                 	server[0].send_message(server[1], ('FaderMaster',1,bpmg))
 
 
@@ -150,13 +149,15 @@ def main():
         return
 
     if args.command == "beat":
-        print("\nWelcome to BPM2OSC v0.1 by CONGO*blue | foh@congo-blue.de | forked from zak-45\n")
+        print("\nWelcome to BPM2OSC v0.2 by CONGO*blue | foh@congo-blue.de | forked from zak-45\n")
         print("(Hit Ctrl+C to exit)\n")
 
-        # Pack data from arguments into ServerInfo objects
-        server_info: List[ServerInfo] = [ServerInfo(x[0], int(x[1]), x[2], x[3]) for x in args.server]
-
-        # Print server info
+        # Pack data from arguments into ServerInfo objects, Replace SPEED with 13.12.3. when MODE=GMA3MASTER 
+        server_info: List[ServerInfo] = [
+            ServerInfo(ip, int(port), mode, ("/" * (mode == "GMA3MASTER" and address.startswith("SPEED"))) + address.replace("SPEED", "13.12.3."))
+        for ip, port, mode, address in args.server
+        ]
+# Print server info
         print("Sending BPM to following OSC-server(s):")
         for server in server_info:
             print(f"IP: {server.ip}, Port: {server.port}, Mode: {server.mode}, OSC-Address: {server.address}")

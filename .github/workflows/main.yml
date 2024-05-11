@@ -68,8 +68,8 @@ jobs:
           script-name: BPM2OSC.py
           company-name: CONGO*blue (forked from zak-45)
           file-version: ${{github.event.inputs.mytag}}
-          windows-icon-from-ico: assets/WLEDAudioSync30.ico
-          macos-app-icon: assets/WLEDAudioSync30.ico
+          windows-icon-from-ico: assets/BPM2OSC.ico
+          macos-app-icon: assets/BPM2OSC.ico
           onefile: true
           onefile-tempdir-spec: ./BPM2OSC
           output-file: BPM2OSC-${{runner.os}}

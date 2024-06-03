@@ -1,6 +1,9 @@
 # BPM2OSC(4GMA3)
 
-This is a neat little tool to analyze the audio input, count the BPM and send it out via OSC-protocol, mainly to developped for [grandMA3](https://www.malighting.com/grandma3/) consoles or software.  
+This is a neat little tool to analyze the audio input, count the BPM and send it out via OSC-protocol. 
+
+Mainly developped for [grandMA3](https://www.malighting.com/grandma3/) consoles or software.  
+
 It is very useful for grandMA3-setups to get an proper BPM speed-value from audio, as the integrated audio-analysis in grandMA3-software still is... let's say... not working properly. ;)
 
 This is a simple beat detector built with [aubio](https://github.com/aubio/aubio), forked/cloned from https://github.com/zak-45/WLEDAudioSyncRTBeat.

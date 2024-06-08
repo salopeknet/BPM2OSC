@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import pyaudio
 import numpy as np
 import aubio
@@ -20,12 +22,27 @@ class ServerInfo(NamedTuple):
     mode: str
     address: str
 
+# Version information
+version = "0.2.2"
+
+# https://patorjk.com/software/taag/#p=display&f=Ivrit&t=BPM2OSC
+ascii_logo = """
+  ____  ____  __  __ ____   ___  ____   ____ 
+ | __ )|  _ \|  \/  |___ \ / _ \/ ___| / ___|
+ |  _ \| |_) | |\/| | __) | | | \___ \| |    
+ | |_) |  __/| |  | |/ __/| |_| |___) | |___ 
+ |____/|_|   |_|  |_|_____|\___/|____/ \____| 
+                                        4GMA3
+"""
+message_Start = f"\n{ascii_logo}\nWelcome to BPM2OSC(4GMA3) v{version} by\nCONGO*blue | Micha Salopek | forked from zak-45\nmore info at: https://github.com/salopeknet/BPM2OSC\n\n(Hit [Ctrl]+[c] to exit)\n"
+message_End = f"\n\nShutting down BPM2OSC. Have a nice day!\n"
+
 
 parser = argparse.ArgumentParser()
 sp = parser.add_subparsers(dest="command")
 
 beat_parser = sp.add_parser("beat",
-                            help="Start beat detection")
+                            help="Start beat detection (add -h for more help)")
 beat_parser.add_argument("-s", "--server",
                          help="OSC Server address (multiple can be provided), Mode=PLAIN for plain BPM-Value, Mode=HALF for half of BPM-Value, Mode=GMA3 for GrandMA3 Speed (100 percent=240BPM), Mode=PULSE for Pulse/Flash 1/0 only, Mode=GMA3MASTER: type SPEED1 (or 1-15) in Address", nargs=4,
                          action="append",
@@ -128,7 +145,7 @@ class BeatDetector:
     def __del__(self):
         self.stream.close()
         self.audio.terminate()
-        print('--- Stopped ---')
+        print(message_End)
 
 
 # find all devices, print info
@@ -147,14 +164,13 @@ def list_devices():
 
 # main
 def main():
+    print(message_Start)
+
     if args.command == "list":
         list_devices()
         return
 
-    if args.command == "beat":
-        print("\nWelcome to BPM2OSC(4GMA3) v0.21 by CONGO*blue | foh@congo-blue.de | forked from zak-45\n")
-        print("(Hit Ctrl+C to exit)\n")
-
+    if args.command == "beat":        
         # Pack data from arguments into ServerInfo objects, Replace SPEED with 13.12.3. when MODE=GMA3MASTER 
         server_info: List[ServerInfo] = [
             ServerInfo(ip, int(port), mode, ("/" * (mode == "GMA3MASTER" and address.startswith("SPEED"))) + address.replace("SPEED", "13.12.3."))
@@ -165,8 +181,8 @@ def main():
         for server in server_info:
             print(f"IP: {server.ip}, Port: {server.port}, Mode: {server.mode}, OSC-Address: {server.address}")
 
-        print("\nHere we go...\n  a one...\n    a two...\n      a one,two,three,four...\n")
-        print("\n... aaand counting!\n")
+        print("\nHere we go...\n  a one...\n    a two...\n      a one,two,three,four...\n                 ... aaand counting!\n")
+#        print("... aaand counting!\n")
         
         bd = BeatDetector(args.bufsize, server_info)
 

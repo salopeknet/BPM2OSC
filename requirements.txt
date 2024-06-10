@@ -1,7 +1,7 @@
 pyaudio
-#works better than aubio & numpy
-git+https://git.aubio.org/aubio/aubio/ 
-#aubio
-#numpy
+#works better than aubio & numpy when manually starting
+#git+https://git.aubio.org/aubio/aubio/ 
+aubio
+numpy
 python-osc
 imageio

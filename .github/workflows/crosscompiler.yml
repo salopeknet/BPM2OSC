@@ -116,5 +116,5 @@ jobs:
         with:
           allowUpdates: true
           commit: main
-          tag: '${{github.event.inputs.myname}} v${{github.event.inputs.mytag}}'
+          tag: ${{github.event.inputs.myname}} v${{github.event.inputs.mytag}}
           artifacts: ${{github.event.inputs.myname}}-${{runner.os}}.*

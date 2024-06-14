@@ -1,28 +1,30 @@
 # Cross-compile workflow that is manually triggered
 
-name: Python-Cross-Compiler
-
+name: Python-Cross-Compiler 3
+    
 on:
   workflow_dispatch:
-    # Inputs the workflow accepts.
+    # Inputs the workflow parameters.
     inputs:
       myname:
-        default: 'BPM2OSC'
+# input script name without .py here:
+        default: BPM2OSC
         description: Script name
         type: string
         required: true
 
       mytag:
-        # Friendly description to be shown in the UI instead of 'name'
         description: 'Input Tag'
-        # Default value if no value is explicitly provided
         default: '0.0.0'
-        # Input has to be provided for the workflow to run
-        required: true
-        # The data type of the input
         type: string
+        required: true
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+      onefile:
+        description: Compile One-File (self-extracting)
+        default: false
+        type: boolean
+        required: true
+        
 
 jobs:
   build:
@@ -31,14 +33,26 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        
+#        os: [macos-latest, windows-latest]
+#        os: [ubuntu-latest]
+#      os: [macos-latest]
     runs-on: ${{matrix.os}}
-   
+    
     steps:
-      - name: Check-out repository
-        uses: actions/checkout@v3
 
-# Script Specific
+      - name: Check-out repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # Version range or exact version of a Python version to use, using SemVer's version range syntax
+          architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
+          cache: 'pip'
+          cache-dependency-path: |
+            **/requirements*.txt
+
+#Start of script-specific stuff
 
       - name: Ubuntu specific
         if: matrix.os == 'ubuntu-latest'
@@ -54,62 +68,72 @@ jobs:
           brew install portaudio
           brew reinstall libsndfile
          
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11' # Version range or exact version of a Python version to use, using SemVer's version range syntax
-          architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
-          cache: 'pip'
-          cache-dependency-path: |
-            **/requirements*.txt
+      - name: Windows specific
+        if: matrix.os == 'windows-latest'
+        run: |
 
+#End of script-specific stuff
+            
       - name: Install Dependencies for All
         run: |
           pip install -r requirements.txt
           
-      - name: Build Executable for ${{runner.os}}
+      - name: Nuitka Compiler for ${{runner.os}}
         uses: Nuitka/Nuitka-Action@v1.0
         with:
           nuitka-version: 1.8.5
-          script-name: ${{github.event.inputs.myname}}.py
-          company-name: CONGO*blue
-          file-version: ${{github.event.inputs.mytag}}
-          onefile: false
-          output-file: ${{github.event.inputs.myname}}
+          onefile: ${{inputs.onefile}}
+          script-name: ${{inputs.myname}}.py
+          company-name: salopeknet
+          file-version: ${{inputs.mytag}}
+          output-file: ${{inputs.myname}}
 
-      - name: Make executable & compress TAR for macOS
-        if: runner.os == 'macOS'
+
+#Finalizing
+          
+      - name: STANDALONE make executable & compress TAR for macOS or Linux
+        if: ${{inputs.onefile == false && (runner.os == 'macOS' || runner.os ==  'Linux')}}
         uses: thedoctor0/zip-release@0.7.6
         with:
           type: "tar"
-          command: "chmod +x build/${{github.event.inputs.myname}}.dist/${{github.event.inputs.myname}} && mv build/${{github.event.inputs.myname}}.dist ${{github.event.inputs.myname}}"
           path: "${{github.event.inputs.myname}}"
-          filename: "${{github.event.inputs.myname}}-${{runner.os}}.tar.gz"
+          command: "chmod +x build/${{github.event.inputs.myname}}.dist/${{github.event.inputs.myname}} && mv build/${{github.event.inputs.myname}}.dist ${{github.event.inputs.myname}}"
+          filename: "${{github.event.inputs.myname}}-${{runner.os}}-STANDALONE.tar.gz"          
 
-      - name: Compress ZIP for Windows
-        if: runner.os == 'Windows'
+      - name: STANDALONE compress ZIP for Windows
+        if: ${{inputs.onefile == false && runner.os == 'Windows'}}
         uses: thedoctor0/zip-release@0.7.6
         with:
           type: "zip"
           command: "mv build/${{github.event.inputs.myname}}.dist ${{github.event.inputs.myname}}"
           path: "${{github.event.inputs.myname}}"
-          filename: "${{github.event.inputs.myname}}-${{runner.os}}.zip"
+          filename: "${{github.event.inputs.myname}}-${{runner.os}}-STANDALONE.zip"
 
-      - name: Make executable & compress TAR for Linux
-        if: runner.os == 'Linux'
+      - name: ONEFILE make executable & compress TAR for macOS or Linux
+        if: ${{inputs.onefile == true && (runner.os == 'macOS' || runner.os ==  'Linux')}}
         uses: thedoctor0/zip-release@0.7.6
         with:
           type: "tar"
-          command: "chmod +x build/${{github.event.inputs.myname}}.dist/${{github.event.inputs.myname}} && mv build/${{github.event.inputs.myname}}.dist ${{github.event.inputs.myname}}"
           path: "${{github.event.inputs.myname}}"
-          filename: "${{github.event.inputs.myname}}-${{runner.os}}.tar.gz"
+          command: "chmod +x build/${{github.event.inputs.myname}} && mv build/${{github.event.inputs.myname}} ${{github.event.inputs.myname}}"
+          filename: "${{github.event.inputs.myname}}-${{runner.os}}-ONEFILE.tar.gz"          
+
+      - name: ONEFILE compress ZIP for Windows
+        if: ${{inputs.onefile == true && runner.os == 'Windows'}}
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: "zip"
+          command: "mv build/${{github.event.inputs.myname}}.exe ${{github.event.inputs.myname}}.exe"
+          path: "${{github.event.inputs.myname}}.exe"
+          filename: "${{github.event.inputs.myname}}-${{runner.os}}-ONEFILE.zip"
+
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{runner.os}} Build
           if-no-files-found: warn
-          path: ${{github.event.inputs.myname}}-${{runner.os}}.*
+          path: ${{github.event.inputs.myname}}-${{runner.os}}*.*
 
       - name: Create Release ${{github.event.inputs.mytag}} with Builds from Nuitka
         uses: ncipollo/release-action@v1
@@ -118,4 +142,4 @@ jobs:
           commit: main
           name: ${{github.event.inputs.myname}} v${{github.event.inputs.mytag}}
           tag: ${{github.event.inputs.mytag}}
-          artifacts: ${{github.event.inputs.myname}}-${{runner.os}}.*
+          artifacts: ${{github.event.inputs.myname}}-${{runner.os}}*.*

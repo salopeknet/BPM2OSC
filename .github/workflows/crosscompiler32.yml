@@ -10,7 +10,7 @@ on:
       scriptname:
 
 # input default script name (without .py) here:
-        default: RPtag
+        default: BPM2OSC
         
         description: Script name
         type: string

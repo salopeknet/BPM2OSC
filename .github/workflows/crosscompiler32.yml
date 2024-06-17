@@ -35,7 +35,7 @@ on:
         required: true
 
       onefilemode:
-        description: 'Compiler output setting: STANDALONE=false, ONEFILE=true or BOTH=false,true'
+        description: 'Compiler output setting: ONEDIR=false, ONEFILE=true or BOTH=false,true'
         type: choice
         options:
         - '["false"]'
@@ -115,23 +115,23 @@ jobs:
 
 #Finalizing
           
-      - name: STANDALONE make executable & compress TAR for macOS or Linux
+      - name: ONEDIR make executable & compress TAR for macOS or Linux
         if: ${{matrix.onefile == 'false' && (runner.os == 'macOS' || runner.os ==  'Linux')}}
         uses: thedoctor0/zip-release@0.7.6
         with:
           type: "tar"
           path: "${{github.event.inputs.scriptname}}"
           command: "chmod +x build/${{github.event.inputs.scriptname}}.dist/${{github.event.inputs.scriptname}} && mv build/${{github.event.inputs.scriptname}}.dist ${{github.event.inputs.scriptname}}"
-          filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-STANDALONE.tar.gz"          
+          filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-ONEDIR.tar.gz"          
 
-      - name: STANDALONE compress ZIP for Windows
+      - name: ONEDIR compress ZIP for Windows
         if: ${{matrix.onefile == 'false' && runner.os == 'Windows'}}
         uses: thedoctor0/zip-release@0.7.6
         with:
           type: "zip"
           command: "mv build/${{github.event.inputs.scriptname}}.dist ${{github.event.inputs.scriptname}}"
           path: "${{github.event.inputs.scriptname}}"
-          filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-STANDALONE.zip"
+          filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-ONEDIR.zip"
 
       - name: ONEFILE make executable & compress TAR for macOS or Linux
         if: ${{matrix.onefile == 'true' && (runner.os == 'macOS' || runner.os ==  'Linux')}}
@@ -155,7 +155,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{runner.os}} Build Onefile ${{matrix.onefile}}
+          name: ${{runner.os}} Build ONEFILE ${{matrix.onefile}}
           if-no-files-found: warn
           path: ${{github.event.inputs.scriptname}}-${{runner.os}}*.*
 

@@ -1,0 +1,169 @@
+# Cross-compile workflow my Micha Salopek
+
+# Just change scriptname and paste platform-specific stuff below 
+
+name: Python-Cross-Compiler 3.2
+    
+on:
+  workflow_dispatch:
+    inputs:
+      scriptname:
+
+# input default script name (without .py) here:
+        default: RPtag
+        
+        description: Script name
+        type: string
+        required: true
+
+      releasetag:
+        description: 'Input Release Tag (Version)'
+        default: '0.0.0'
+        type: string
+        required: true
+
+      compilefor:
+        description: 'Compile for which platforms?'
+        type: choice
+        options:
+        - '["macos-latest"]'
+        - '["ubuntu-latest"]'
+        - '["windows-latest"]'
+        - '["macos-latest", "windows-latest"]'
+        - '["macos-latest", "windows-latest", "ubuntu-latest"]'
+        default: '["macos-latest", "windows-latest", "ubuntu-latest"]'
+        required: true
+
+      onefilemode:
+        description: 'Compiler output setting: STANDALONE=false, ONEFILE=true or BOTH=false,true'
+        type: choice
+        options:
+        - '["false"]'
+        - '["true"]'
+        - '["false", "true"]'
+        default: '["false", "true"]'
+        required: true
+
+    
+        
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        os: ${{ fromJSON(github.event.inputs.compilefor) }}
+        onefile: ${{ fromJSON(github.event.inputs.onefilemode) }}
+
+    runs-on: ${{matrix.os}}
+    
+    steps:
+
+      - name: Check-out repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # Version range or exact version of a Python version to use, using SemVer's version range syntax
+          architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
+          cache: 'pip'
+          cache-dependency-path: |
+            **/requirements*.txt
+
+
+
+#Start of platform-specific stuff
+
+      - name: Ubuntu specific
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install libasound-dev portaudio19-dev libportaudio2 libportaudiocpp0
+          sudo apt-get install ffmpeg
+
+      - name: MacOS specific
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install portaudio
+          brew reinstall libsndfile
+         
+      - name: Windows specific
+        if: matrix.os == 'windows-latest'
+        run: |
+
+#End of platform-specific stuff
+
+
+
+#Compiling
+            
+      - name: Install Dependencies for All
+        run: |
+          pip install -r requirements.txt
+          
+      - name: Nuitka Compiler for ${{runner.os}}
+        uses: Nuitka/Nuitka-Action@v1.0
+        with:
+          nuitka-version: 1.8.5
+          onefile: ${{ fromJSON(matrix.onefile)}}
+          script-name: ${{inputs.scriptname}}.py
+          company-name: salopeknet
+          file-version: ${{inputs.releasetag}}
+          output-file: ${{inputs.scriptname}}
+
+#Finalizing
+          
+      - name: STANDALONE make executable & compress TAR for macOS or Linux
+        if: ${{matrix.onefile == 'false' && (runner.os == 'macOS' || runner.os ==  'Linux')}}
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: "tar"
+          path: "${{github.event.inputs.scriptname}}"
+          command: "chmod +x build/${{github.event.inputs.scriptname}}.dist/${{github.event.inputs.scriptname}} && mv build/${{github.event.inputs.scriptname}}.dist ${{github.event.inputs.scriptname}}"
+          filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-STANDALONE.tar.gz"          
+
+      - name: STANDALONE compress ZIP for Windows
+        if: ${{matrix.onefile == 'false' && runner.os == 'Windows'}}
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: "zip"
+          command: "mv build/${{github.event.inputs.scriptname}}.dist ${{github.event.inputs.scriptname}}"
+          path: "${{github.event.inputs.scriptname}}"
+          filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-STANDALONE.zip"
+
+      - name: ONEFILE make executable & compress TAR for macOS or Linux
+        if: ${{matrix.onefile == 'true' && (runner.os == 'macOS' || runner.os ==  'Linux')}}
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: "tar"
+          path: "${{github.event.inputs.scriptname}}"
+          command: "chmod +x build/${{github.event.inputs.scriptname}} && mv build/${{github.event.inputs.scriptname}} ${{github.event.inputs.scriptname}}"
+          filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-ONEFILE.tar.gz"          
+
+      - name: ONEFILE compress ZIP for Windows
+        if: ${{matrix.onefile == 'true' && runner.os == 'Windows'}}
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: "zip"
+          command: "mv build/${{github.event.inputs.scriptname}}.exe ${{github.event.inputs.scriptname}}.exe"
+          path: "${{github.event.inputs.scriptname}}.exe"
+          filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-ONEFILE.zip"
+
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{runner.os}} Build Onefile ${{matrix.onefile}}
+          if-no-files-found: warn
+          path: ${{github.event.inputs.scriptname}}-${{runner.os}}*.*
+
+      - name: Create Release ${{github.event.inputs.releasetag}} with Builds from Nuitka
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          commit: main
+          name: ${{github.event.inputs.scriptname}} v${{github.event.inputs.releasetag}}
+          tag: ${{github.event.inputs.releasetag}}
+          artifacts: ${{github.event.inputs.scriptname}}-${{runner.os}}*.*

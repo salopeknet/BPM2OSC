@@ -1,0 +1,185 @@
+# Cross-compile workflow my Micha Salopek
+
+# Just change scriptname and paste platform-specific stuff below 
+
+name: Python-Cross-Compiler 4.0
+ 
+on:
+  workflow_dispatch:
+    inputs:
+      scriptname:
+
+# input default script name (without .py) here:
+        default: helloworld
+        
+        description: 'Script name'
+        type: string
+        required: true
+
+      releasetag:
+        description: 'Release Tag (Version)'
+        default: '0.0.0'
+        type: string
+        required: true
+      macos:
+        description: 'Build for macOS'
+        type: boolean
+        default: true
+      windows:
+        description: 'Build for Windows'
+        type: boolean
+        default: true
+      linux:
+        description: 'Build for Linux'
+        type: boolean
+        default: false
+      onedir:
+        description: 'Compile one-directory'
+        type: boolean
+        default: false
+      onefile:
+        description: 'Compile one-file'
+        type: boolean
+        default: true
+
+jobs:
+
+  MatrixPrepare:
+    runs-on: ubuntu-latest
+    outputs:
+      operatingsystems: ${{ steps.prepare_os.outputs.operatingsystems }}
+      filemode: ${{ steps.prepare_filemode.outputs.filemode }}
+    steps:
+      - id: prepare_os
+        run: |
+          echo '{
+            "macos-latest": '${{ github.event.inputs.macos }}',
+            "windows-latest": '${{ github.event.inputs.windows }}',
+            "ubuntu-latest": '${{ github.event.inputs.linux }}'
+          }' | jq -c 'with_entries(select(.value)) | keys' > os.json
+          operatingsystems=$(cat os.json)
+          echo "operatingsystems=$operatingsystems" >> $GITHUB_OUTPUT
+
+      - id: prepare_filemode
+        run: |
+          echo '{
+            "true": '${{ github.event.inputs.onefile }}',
+            "false": '${{ github.event.inputs.onedir }}'
+          }' | jq -c 'with_entries(select(.value)) | keys' > filemode.json
+          filemode=$(cat filemode.json)
+          echo "filemode=$filemode" >> $GITHUB_OUTPUT
+
+  Build:
+    needs: MatrixPrepare
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        os: ${{ fromJSON(needs.MatrixPrepare.outputs.operatingsystems) }}
+        onefile: ${{ fromJSON(needs.MatrixPrepare.outputs.filemode) }}
+    runs-on: ${{matrix.os}}
+    
+    steps:
+
+      - name: Check-out repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # Version range or exact version of a Python version to use, using SemVer's version range syntax
+          architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
+          cache: 'pip'
+          cache-dependency-path: |
+            **/requirements*.txt
+
+
+
+#Start of platform-specific stuff
+
+      - name: Ubuntu specific
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+
+      - name: MacOS specific
+        if: matrix.os == 'macos-latest'
+        run: |
+         
+      - name: Windows specific
+        if: matrix.os == 'windows-latest'
+        run: |
+
+#End of platform-specific stuff
+
+
+
+#Compiling
+            
+      - name: Install Dependencies for All
+        run: |
+          pip install -r requirements.txt
+          
+      - name: Nuitka Compiler for ${{runner.os}}
+        uses: Nuitka/Nuitka-Action@v1.0
+        with:
+          nuitka-version: 2.3.3
+          onefile: ${{ fromJSON(matrix.onefile)}}
+          script-name: ${{inputs.scriptname}}.py
+          company-name: salopeknet
+          file-version: ${{inputs.releasetag}}
+          output-file: ${{inputs.scriptname}}
+
+#Finalizing
+          
+      - name: ONEDIR make executable & compress TAR for macOS or Linux
+        if: ${{matrix.onefile == 'false' && (runner.os == 'macOS' || runner.os ==  'Linux')}}
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: "tar"
+          path: "${{github.event.inputs.scriptname}}"
+          command: "chmod +x build/${{github.event.inputs.scriptname}}.dist/${{github.event.inputs.scriptname}} && mv build/${{github.event.inputs.scriptname}}.dist ${{github.event.inputs.scriptname}}"
+          filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-ONEDIR.tar.gz"          
+
+      - name: ONEDIR compress ZIP for Windows
+        if: ${{matrix.onefile == 'false' && runner.os == 'Windows'}}
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: "zip"
+          command: "mv build/${{github.event.inputs.scriptname}}.dist ${{github.event.inputs.scriptname}}"
+          path: "${{github.event.inputs.scriptname}}"
+          filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-ONEDIR.zip"
+
+      - name: ONEFILE make executable & compress TAR for macOS or Linux
+        if: ${{matrix.onefile == 'true' && (runner.os == 'macOS' || runner.os ==  'Linux')}}
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: "tar"
+          path: "${{github.event.inputs.scriptname}}"
+          command: "chmod +x build/${{github.event.inputs.scriptname}} && mv build/${{github.event.inputs.scriptname}} ${{github.event.inputs.scriptname}}"
+          filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-ONEFILE.tar.gz"          
+
+      - name: ONEFILE compress ZIP for Windows
+        if: ${{matrix.onefile == 'true' && runner.os == 'Windows'}}
+        uses: thedoctor0/zip-release@0.7.6
+        with:
+          type: "zip"
+          command: "mv build/${{github.event.inputs.scriptname}}.exe ${{github.event.inputs.scriptname}}.exe"
+          path: "${{github.event.inputs.scriptname}}.exe"
+          filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-ONEFILE.zip"
+
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{runner.os}} Build ONEFILE ${{matrix.onefile}}
+          if-no-files-found: warn
+          path: ${{github.event.inputs.scriptname}}-${{runner.os}}*.*
+
+      - name: Create Release ${{github.event.inputs.releasetag}} with Builds from Nuitka
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          commit: main
+          name: ${{github.event.inputs.scriptname}} v${{github.event.inputs.releasetag}}
+          tag: ${{github.event.inputs.releasetag}}
+          artifacts: ${{github.event.inputs.scriptname}}-${{runner.os}}*.*

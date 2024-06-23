@@ -10,7 +10,7 @@ on:
       scriptname:
 
 # input default script name (without .py) here:
-        default: helloworld
+        default: BPM2OSC
         
         description: 'Script name'
         type: string
@@ -100,10 +100,16 @@ jobs:
       - name: Ubuntu specific
         if: matrix.os == 'ubuntu-latest'
         run: |
+          sudo apt-get update
+          sudo apt-get install libasound-dev portaudio19-dev libportaudio2 libportaudiocpp0
+          sudo apt-get install ffmpeg
 
       - name: MacOS specific
         if: matrix.os == 'macos-latest'
         run: |
+          brew update
+          brew install portaudio
+          brew reinstall libsndfile
          
       - name: Windows specific
         if: matrix.os == 'windows-latest'
@@ -122,7 +128,7 @@ jobs:
       - name: Nuitka Compiler for ${{runner.os}}
         uses: Nuitka/Nuitka-Action@v1.0
         with:
-          nuitka-version: 2.3.3
+          nuitka-version: 1.8.5
           onefile: ${{ fromJSON(matrix.onefile)}}
           script-name: ${{inputs.scriptname}}.py
           company-name: salopeknet

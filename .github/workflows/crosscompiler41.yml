@@ -175,7 +175,7 @@ jobs:
         uses: thedoctor0/zip-release@0.7.6
         with:
           type: "tar"
-          path: "${{github.event.inputs.scriptname}}"
+          path: "${{github.event.inputs.scriptname}} README.md"
           command: "chmod +x build/${{github.event.inputs.scriptname}}.dist/${{github.event.inputs.scriptname}} && mv build/${{github.event.inputs.scriptname}}.dist ${{github.event.inputs.scriptname}}"
           filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-ONEDIR.tar.gz"          
 
@@ -185,7 +185,7 @@ jobs:
         with:
           type: "zip"
           command: "mv build/${{github.event.inputs.scriptname}}.dist ${{github.event.inputs.scriptname}}"
-          path: "${{github.event.inputs.scriptname}}"
+          path: "${{github.event.inputs.scriptname}} README.md"
           filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-ONEDIR.zip"
 
       - name: ONEFILE make executable & compress TAR for macOS or Linux
@@ -193,7 +193,7 @@ jobs:
         uses: thedoctor0/zip-release@0.7.6
         with:
           type: "tar"
-          path: "${{github.event.inputs.scriptname}}"
+          path: "${{github.event.inputs.scriptname}} README.md"
           command: "chmod +x build/${{github.event.inputs.scriptname}} && mv build/${{github.event.inputs.scriptname}} ${{github.event.inputs.scriptname}}"
           filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-ONEFILE.tar.gz"          
 
@@ -203,7 +203,7 @@ jobs:
         with:
           type: "zip"
           command: "mv build/${{github.event.inputs.scriptname}}.exe ${{github.event.inputs.scriptname}}.exe"
-          path: "${{github.event.inputs.scriptname}}.exe"
+          path: "${{github.event.inputs.scriptname}}.exe README.md"
           filename: "${{github.event.inputs.scriptname}}-${{runner.os}}-ONEFILE.zip"
 
 

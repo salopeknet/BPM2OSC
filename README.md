@@ -48,7 +48,18 @@ python BPM2OSC.py
 ## Usage
 
 ```
-BPM2OSC-{OS} beat|list [-h] -s IP PORT MODE ADDRESS [-b BUFSIZE] [-v] [-d DEVICE]
+  ____  ____  __  __ ____   ___  ____   ____ 
+ | __ )|  _ \|  \/  |___ \ / _ \/ ___| / ___|
+ |  _ \| |_) | |\/| | __) | | | \___ \| |    
+ | |_) |  __/| |  | |/ __/| |_| |___) | |___ 
+ |____/|_|   |_|  |_|_____|\___/|____/ \____| 
+                                        4GMA3
+Welcome to BPM2OSC(4GMA3) vX.X.X by
+CONGO*blue | Micha Salopek | forked from zak-45
+more info at: https://github.com/salopeknet/BPM2OSC
+
+usage: 
+BPM2OSC beat|list [-h] -s IP PORT MODE ADDRESS [-b BUFSIZE] [-v] [-d DEVICE]
 
 optional arguments:
   -h, --help            show this help message and exit

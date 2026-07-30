@@ -1,0 +1,40 @@
+# Thin wrapper around the shared Python-Crosscompiler-One4All workflow
+# (salopeknet/myTools). Only BPM2OSC's own deltas from the defaults live
+# here - everything generic lives in myTools.
+
+name: Python-Crosscompiler-One4All 5.0 (BPM2OSC)
+
+on:
+  workflow_dispatch:
+    inputs:
+      releasetag:
+        description: 'Release Tag (Version)'
+        type: string
+        required: true
+        default: '0.0.0'
+      macos:
+        description: 'Build for macOS'
+        type: boolean
+        default: true
+      windows:
+        description: 'Build for Windows'
+        type: boolean
+        default: true
+      linux:
+        description: 'Build for Linux'
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    uses: salopeknet/myTools/.github/workflows/crosscompilerMS.yml@main
+    with:
+      scriptname: BPM2OSC
+      releasetag: ${{ inputs.releasetag }}
+      macos: ${{ inputs.macos }}
+      windows: ${{ inputs.windows }}
+      linux: ${{ inputs.linux }}
+      macos_brew_packages: "portaudio libsndfile"
+      linux_apt_packages: "libasound-dev portaudio19-dev libportaudio2 libportaudiocpp0 ffmpeg"

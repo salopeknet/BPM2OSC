@@ -24,6 +24,14 @@ on:
         description: 'Build for Linux'
         type: boolean
         default: false
+      onedir:
+        description: 'Compile one-directory'
+        type: boolean
+        default: false
+      onefile:
+        description: 'Compile one-file'
+        type: boolean
+        default: true
 
 jobs:
   build:
@@ -36,5 +44,7 @@ jobs:
       macos: ${{ inputs.macos }}
       windows: ${{ inputs.windows }}
       linux: ${{ inputs.linux }}
+      onedir: ${{ inputs.onedir }}
+      onefile: ${{ inputs.onefile }}
       macos_brew_packages: "portaudio libsndfile"
       linux_apt_packages: "libasound-dev portaudio19-dev libportaudio2 libportaudiocpp0 ffmpeg"

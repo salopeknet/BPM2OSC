@@ -23,15 +23,15 @@ class ServerInfo(NamedTuple):
     address: str
 
 # Version information
-version = "0.2.2"
+version = "0.2.4"
 
 # https://patorjk.com/software/taag/#p=display&f=Ivrit&t=BPM2OSC
 ascii_logo = """
-  ____  ____  __  __ ____   ___  ____   ____ 
+  ____  ____  __  __ ____   ___  ____   ____
  | __ )|  _ \|  \/  |___ \ / _ \/ ___| / ___|
- |  _ \| |_) | |\/| | __) | | | \___ \| |    
- | |_) |  __/| |  | |/ __/| |_| |___) | |___ 
- |____/|_|   |_|  |_|_____|\___/|____/ \____| 
+ |  _ \| |_) | |\/| | __) | | | \___ \| |
+ | |_) |  __/| |  | |/ __/| |_| |___) | |___
+ |____/|_|   |_|  |_|_____|\___/|____/ \____|
                                         4GMA3
 """
 message_Start = f"\n{ascii_logo}\nWelcome to BPM2OSC(4GMA3) v{version} by\nCONGO*blue | Micha Salopek | forked from zak-45\nmore info at: https://github.com/salopeknet/BPM2OSC\n\n(Hit [Ctrl]+[c] to exit)\n"
@@ -44,7 +44,7 @@ sp = parser.add_subparsers(dest="command")
 beat_parser = sp.add_parser("beat",
                             help="Start beat detection (add -h for more help)")
 beat_parser.add_argument("-s", "--server",
-                         help="OSC Server address (multiple can be provided), Mode=PLAIN for plain BPM-Value, Mode=HALF for half of BPM-Value, Mode=GMA3 for GrandMA3 Speed (100 percent=240BPM), Mode=PULSE for Pulse/Flash 1/0 only, Mode=GMA3MASTER: type SPEED1 (or 1-15) in Address", nargs=4,
+                         help="OSC Server address (multiple can be provided), Mode=PLAIN for plain BPM-Value, Mode=HALF for half of BPM-Value, Mode=GMA3 for GrandMA3 Speed (100 percent=225BPM), Mode=PULSE for Pulse/Flash 1/0 only, Mode=GMA3MASTER: type SPEED1 (or 1-15) in Address", nargs=4,
                          action="append",
                          metavar=("IP", "PORT", "MODE", "ADDRESS"), required=True)
 beat_parser.add_argument("-b", "--bufsize",
@@ -73,7 +73,7 @@ class BeatPrinter:
     def print_bpm(self, bpm: float, dbs: float) -> None:
         print(f"\r{self.spinner[self.state]}\t{bpm:.1f} BPM\t{dbs:.1f} dB", end='', flush=True)
         self.state = (self.state + 1) % len(self.spinner)
-        
+
 class BeatDetector:
     def __init__(self, buf_size: int, server_info: List[ServerInfo]):
         self.buf_size: int = buf_size
@@ -119,25 +119,25 @@ class BeatDetector:
             bpm = self.tempo.get_bpm()
             # recalculate half BPM
             bpmh = bpm / 2
-            # recalculate BPM for GrandMA3
-            bpmg = math.sqrt(bpm / 240) * 100
+            # recalculate BPM for GrandMA3 (new Formula since gMA3 v2.x), capped at 100%=225BPM
+            bpmg = min((bpm ** (1 / 1.907)) / 0.17118, 100.0)
 
             if args.verbose:
                 self.spinner.print_bpm(bpm, dbs)
 
             for server, server_info in zip(self.osc_servers, self.server_info):
-            	mode = server_info.mode
-            	if mode == "PLAIN":
-                	server[0].send_message(server[1], bpm)
-            	elif mode == "HALF":
-                	server[0].send_message(server[1], bpmh)
-            	elif mode == "GMA3":
-                	server[0].send_message(server[1], bpmg)
-            	elif mode == "PULSE":
-                	server[0].send_message(server[1], 1)
-                	server[0].send_message(server[1], 0)
-            	elif mode == "GMA3MASTER":
-                	server[0].send_message(server[1], ('FaderMaster',1,bpmg))
+                mode = server_info.mode
+                if mode == "PLAIN":
+                    server[0].send_message(server[1], bpm)
+                elif mode == "HALF":
+                    server[0].send_message(server[1], bpmh)
+                elif mode == "GMA3":
+                    server[0].send_message(server[1], bpmg)
+                elif mode == "PULSE":
+                    server[0].send_message(server[1], 1)
+                    server[0].send_message(server[1], 0)
+                elif mode == "GMA3MASTER":
+                    server[0].send_message(server[1], ('FaderMaster',1,bpmg))
 
 
         return None, pyaudio.paContinue  # Tell pyAudio to continue
@@ -170,10 +170,10 @@ def main():
         list_devices()
         return
 
-    if args.command == "beat":        
-        # Pack data from arguments into ServerInfo objects, Replace SPEED with 13.12.3. when MODE=GMA3MASTER 
+    if args.command == "beat":
+        # Pack data from arguments into ServerInfo objects, Replace SPEED with 14.13.3. when MODE=GMA3MASTER
         server_info: List[ServerInfo] = [
-            ServerInfo(ip, int(port), mode, ("/" * (mode == "GMA3MASTER" and address.startswith("SPEED"))) + address.replace("SPEED", "13.12.3."))
+            ServerInfo(ip, int(port), mode, ("/" * (mode == "GMA3MASTER" and address.startswith("SPEED"))) + address.replace("SPEED", "14.13.3."))
         for ip, port, mode, address in args.server
         ]
 # Print server info
@@ -183,7 +183,7 @@ def main():
 
         print("\nHere we go...\n  a one...\n    a two...\n      a one,two,three,four...\n                 ... aaand counting!\n")
 #        print("... aaand counting!\n")
-        
+
         bd = BeatDetector(args.bufsize, server_info)
 
         # capture ctrl+c to stop gracefully process
@@ -209,3 +209,5 @@ def main():
 # main run
 if __name__ == "__main__":
     main()
+
+                    

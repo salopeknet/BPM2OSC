@@ -67,7 +67,7 @@ optional arguments:
   -s IP PORT MODE ADDRESS, --server IP PORT MODE ADDRESS
                         IP OSC-Server IP
                         PORT OSC-Server Port
-                        MODE=PLAIN for plain BPM-Value, MODE=HALF for half of BPM-Value, MODE=GMA3 for GrandMA3 Speed (100 percent=240BPM), MODE=PULSE for Pulse/Flash 1/0 only, MODE=GMA3MASTER: type SPEED1 (or 1-15) in Address
+                        MODE=PLAIN for plain BPM-Value, MODE=HALF for half of BPM-Value, MODE=GMA3 for GrandMA3 Speed (100 percent=225BPM), MODE=PULSE for Pulse/Flash 1/0 only, MODE=GMA3MASTER: type SPEED1 (or 1-15) in Address
   -b BUFSIZE, --bufsize BUFSIZE
                         Size of audio buffer for beat detection (default: 512)
   -d DEVICE, --device DEVICE
@@ -86,11 +86,11 @@ Add an `IP`, `PORT` , `MODE` and OSC `ADDRESS` to which the BPM beat signal will
 PLAIN (sends counted bpm as an flaoting number)    
 HALF (bpm / 2)  
 PULSE (sends every single beat as integer 1/0, perhaps to a GMA3 Flash-key or Learn-key)  
-GMA3 (sends calculated BPM to match GMA3-Faders, where 240BPM is 100%) to any given fader/OSC-Adress  
+GMA3 (sends calculated BPM to match GMA3-Faders, where 225BPM is 100%) to any given fader/OSC-Adress  
 GMA3MASTER (sends BPM directly to the internal SpeedMasters 1-15)
 
 `ADDRESS`               OSC-Adress like /gMA3/Page1/Fader211, /gMA3/Page3/Key111, /MadMapper/GlobalSpeed  
-In case of MODE=GMA3MASTER type e.g. /SPEED1 and the SPEEDx gets converted to GMA3-SpeedMasters Object-Adress like 13.12.3.x  
+In case of MODE=GMA3MASTER type e.g. /SPEED1 and the SPEEDx gets converted to GMA3-SpeedMasters Object-Adress like 14.13.3.x  
 Don't forget to include an optionally set global prefix in MA-Software, like "gMA3" at the beginning of the OSC-address.
 
 ### `-b`/`--bufsize`

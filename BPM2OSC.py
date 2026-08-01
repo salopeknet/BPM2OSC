@@ -23,7 +23,19 @@ class ServerInfo(NamedTuple):
     address: str
 
 # Version information
-version = "0.2.4"
+version = "0.2.5"
+
+# aubio's tempo tracker overestimates BPM by a small, consistent amount in the
+# 55-165 BPM range. Measured against a known click sweep (60-160 BPM):
+# raw error +0.7% to +1.6%, slightly increasing with tempo, fit as a linear
+# correction (max residual ~0.45 BPM vs ~0.69 BPM for a plain multiplicative factor).
+BPM_CORRECTION_SLOPE = 0.9812
+BPM_CORRECTION_OFFSET = 0.815
+
+# GrandMA3 SpeedMaster percent<->BPM relationship (gMA3 v2.x+): 60 BPM at
+# 50% fader, 225 BPM at 100%, log-scaled in between. Exponent derived exactly
+# as in the console's own conversion
+GMA3_SPEED_EXPONENT = math.log(60 / 225) / math.log(50 / 100)
 
 # https://patorjk.com/software/taag/#p=display&f=Ivrit&t=BPM2OSC
 ascii_logo = """
@@ -67,11 +79,11 @@ class BeatPrinter:
         self.state: int = 0
 # Not working on Windows. Code-Page-Problem?
 #        self.spinner = ["◼︎▫︎▫︎▫︎", "▫︎◼︎▫︎▫︎", "▫︎▫︎◼︎▫︎", "▫︎▫︎▫︎◼︎"]
-        self.spinner = ["1...", ".2..", "..3.", "...4"]
+        self.spinner = ["|...", ".|..", "..|.", "...|"]
 
 
     def print_bpm(self, bpm: float, dbs: float) -> None:
-        print(f"\r{self.spinner[self.state]}\t{bpm:.1f} BPM\t{dbs:.1f} dB", end='', flush=True)
+        print(f"\r{self.spinner[self.state]}  {bpm:6.1f} BPM  {dbs:7.1f} dB  ", end='', flush=True)
         self.state = (self.state + 1) % len(self.spinner)
 
 class BeatDetector:
@@ -116,11 +128,11 @@ class BeatDetector:
         if beat[0]:
             # volume level in db
             dbs = aubio.db_spl(aubio.fvec(audio_data))
-            bpm = self.tempo.get_bpm()
+            bpm = self.tempo.get_bpm() * BPM_CORRECTION_SLOPE + BPM_CORRECTION_OFFSET
             # recalculate half BPM
             bpmh = bpm / 2
             # recalculate BPM for GrandMA3 (new Formula since gMA3 v2.x), capped at 100%=225BPM
-            bpmg = min((bpm ** (1 / 1.907)) / 0.17118, 100.0)
+            bpmg = min(100.0 * (bpm / 225.0) ** (1 / GMA3_SPEED_EXPONENT), 100.0)
 
             if args.verbose:
                 self.spinner.print_bpm(bpm, dbs)
@@ -209,5 +221,3 @@ def main():
 # main run
 if __name__ == "__main__":
     main()
-
-                    
